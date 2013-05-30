@@ -35,8 +35,15 @@
 %% Public API
 %% ===================================================================
 
+files(Config) ->
+    SrcDirs=["src"] ++ rebar_config:get(Config,src_dirs,[]) ++ rebar_config:get(Config,protobuf_dirs,[]),
+    lists:foldl(fun(D,A) -> 
+        A ++ rebar_utils:find_files(D, ".*\\.proto$")
+    end,[],SrcDirs).
+
 compile(Config, _AppFile) ->
-    case rebar_utils:find_files("src", ".*\\.proto$") of
+    % case rebar_utils:find_files("src", ".*\\.proto$") of
+    case files(Config) of
         [] ->
             ok;
         FoundFiles ->
@@ -58,9 +65,9 @@ compile(Config, _AppFile) ->
     end.
 
 
-clean(_Config, _AppFile) ->
+clean(Config, _AppFile) ->
     %% Get a list of generated .beam and .hrl files and then delete them
-    Protos = rebar_utils:find_files("src", ".*\\.proto$"),
+    Protos = files(Config), %rebar_utils:find_files("src", ".*\\.proto$"),
     BeamFiles = [fq_beam_file(F) || F <- Protos],
     HrlFiles = [fq_hrl_file(F) || F <- Protos],
     Targets = BeamFiles ++ HrlFiles,
