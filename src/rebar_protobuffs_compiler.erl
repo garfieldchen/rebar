@@ -34,9 +34,10 @@
 %% ===================================================================
 %% Public API
 %% ===================================================================
-
+extra_path(Config) ->
+    rebar_config:get(Config,src_dirs,[]) ++ rebar_config:get(Config,protobuf_dirs,[]).
 files(Config) ->
-    SrcDirs=["src"] ++ rebar_config:get(Config,src_dirs,[]) ++ rebar_config:get(Config,protobuf_dirs,[]),
+    SrcDirs=["src"] ++ extra_path(Config),
     lists:foldl(fun(D,A) -> 
         A ++ rebar_utils:find_files(D, ".*\\.proto$")
     end,[],SrcDirs).
@@ -110,7 +111,8 @@ compile_each(Config, [{Proto, Beam, Hrl} | Rest]) ->
             ?CONSOLE("Compiling ~s\n", [Proto]),
             ErlOpts = rebar_utils:erl_opts(Config),
             case protobuffs_compile:scan_file(Proto,
-                                              [{compile_flags,ErlOpts}]) of
+                                              [{compile_flags, ErlOpts},
+                                                {imports_dir, extra_path(Config)}]) of
                 ok ->
                     %% Compilation worked, but we need to move the
                     %% beam and .hrl file into the ebin/ and include/
