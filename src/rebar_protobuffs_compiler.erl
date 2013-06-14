@@ -112,16 +112,29 @@ compile_each(Config, [{Proto, Beam, Hrl} | Rest]) ->
             ErlOpts = rebar_utils:erl_opts(Config),
             case protobuffs_compile:scan_file(Proto,
                                               [{compile_flags, ErlOpts},
-                                                {imports_dir, extra_path(Config)}]) of
+                                                {imports_dir, extra_path(Config)}] ++ element(3, Config)) of
                 ok ->
                     %% Compilation worked, but we need to move the
                     %% beam and .hrl file into the ebin/ and include/
                     %% directories respectively
                     %% TODO: Protobuffs really needs to be better about this
-                    ok = filelib:ensure_dir(filename:join("ebin","dummy")),
+
+                    % modify by garfieldchen, add output_ebin_dir/output_include_dir support, which erlang-protobuffs already did.
+                    EbinDir = rebar_config:get(Config, output_ebin_dir, "ebin"),
+                    ok = filelib:ensure_dir(filename:join(EbinDir,"dummy")),
                     ok = rebar_file_utils:mv(Beam, "ebin"),
-                    ok = filelib:ensure_dir(filename:join("include", Hrl)),
-                    ok = rebar_file_utils:mv(Hrl, "include"),
+
+                    HrlDir = rebar_config:get(Config, output_include_dir, "include"),
+
+                    Hrl1 = filename:join(HrlDir, Hrl),
+
+                    ok = filelib:ensure_dir(Hrl1),
+                    ok = case filelib:is_file(Hrl1) of
+                            true ->
+                                ok;
+                            false -> 
+                                rebar_file_utils:mv(Hrl, HrlDir)
+                        end,
                     ok;
                 Other ->
                     ?ERROR("Protobuff compile of ~s failed: ~p\n",
